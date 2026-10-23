@@ -1,4 +1,4 @@
-# CATopalian_PY_TOC_Generator_for_MD.pyw
+# CATopalian_PY_TOC_and_Book_Generator_for_MD.pyw
 
 from pathlib import Path
 
