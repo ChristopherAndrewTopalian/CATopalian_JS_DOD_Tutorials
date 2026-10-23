@@ -4,6 +4,12 @@ We construct worlds that are very efficient!
 
 ---
 
+[TOC](TABLE_OF_CONTENTS.md)  
+
+[Code Book](CODE_BOOK.md)
+
+---
+
 ### How to Download this App
 1. Click the green Code Button on this github page
 2. Choose Download ZIP
