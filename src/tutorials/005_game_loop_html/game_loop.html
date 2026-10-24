@@ -1,0 +1,144 @@
+<!-- Dedicated to God the Father -->
+<!-- All Rights Reserved Christopher Andrew Topalian Copyright 2000-2026 -->
+<!-- https://github.com/ChristopherTopalian -->
+<!-- https://github.com/ChristopherAndrewTopalian -->
+<!-- game_loop.html -->
+
+<!DOCTYPE html>
+<html lang = 'en'>
+<head>
+<title> Game Loop </title>
+
+<meta charset = 'UTF-8'>
+
+<meta name = 'viewport' content = 'width=device-width, initial-scale=1.0'>
+
+<style>
+
+body
+{
+    background-color: rgb(30, 30, 30);
+    color: rgb(255, 255, 255);
+}
+
+</style>
+
+<script>
+
+let world = {};
+
+//----//
+
+// shortcuts.js
+
+function ge(whichId)
+{
+    let result = document.getElementById(whichId);
+    return result;
+}
+
+function ce(whichType)
+{
+    let result = document.createElement(whichType);
+    return result;
+}
+
+function ba(whichElement)
+{
+    let result = document.body.append(whichElement);
+    return result;
+}
+
+//----//
+
+// make entity object data and physical DOM element
+function makeEntity(name, width, height)
+{
+    // Create the physical monitor (the DOM element)
+    let visual = ce('div');
+    visual.id = name;
+    visual.style.position = 'absolute';
+    visual.style.width = width + 'px';
+    visual.style.height = height + 'px';
+    visual.style.backgroundColor = 'rgb(0, 255, 255)'; 
+    ba(visual);
+
+    // Create the pure data
+    let entityData = {
+        name: name,
+        width: width,
+        height: height,
+        id: name,
+        x: 100,
+        y: 100,
+        vx: 0, 
+        vy: 0,  
+        shields: 100,
+        energy: 100,
+        emotion: 'neutral'
+    };
+
+    return entityData;
+}
+
+// movementSystem.js
+function movementSystem()
+{
+    for (let i in world)
+    {
+        let currentData = world[i];
+
+        // Apply the velocity to the pure data coordinates
+        currentData.x += currentData.vx;
+        currentData.y += currentData.vy;
+    }
+}
+
+// Renamed from makeEntities to clarify it only updates the screen
+function updateVisuals()
+{
+    for (let i in world)
+    {
+        let currentData = world[i];
+        let entity = ge(currentData.id);
+
+        // Paint the pure data onto the physical monitor
+        entity.style.left = currentData.x + 'px';
+        entity.style.top = currentData.y + 'px';
+    }
+}
+
+// define the game loop
+function gameLoop()
+{
+    // Calculate the new math
+    movementSystem();
+
+    // Draw the new math
+    updateVisuals();
+
+    requestAnimationFrame(gameLoop);
+}
+
+function whenLoaded()
+{
+    // Create the ship ONCE
+    world.enterprise = makeEntity('Enterprise', 100, 125);
+
+    // Give it a gentle push so velocity takes over in the loop
+    world.enterprise.vx = 2; 
+
+    // Start the engine
+    gameLoop();
+}
+
+</script>
+
+</head>
+
+<body onload = "whenLoaded();">
+
+</body>
+
+</html>
+

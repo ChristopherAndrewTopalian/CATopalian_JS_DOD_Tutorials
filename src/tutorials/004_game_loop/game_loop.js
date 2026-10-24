@@ -1,4 +1,4 @@
-// dod_with_default_settings_simple.js
+// game_loop.js
 
 // create the empty world object
 let world = {};
