@@ -51,24 +51,14 @@ function ba(whichElement)
 
 //----//
 
-// make entity object data and physical DOM element
-function makeEntity(name, x, y, width, height)
+// Only handles the math and logic (The Truth)
+function createEntityData(name, x, y, width, height)
 {
-    // Create the physical monitor (the DOM element)
-    let visual = ce('div');
-    visual.id = name;
-    visual.style.position = 'absolute';
-    visual.style.width = width + 'px';
-    visual.style.height = height + 'px';
-    visual.style.backgroundColor = 'rgb(0, 255, 255)'; 
-    ba(visual);
-
-    // Create the pure data
-    let entityData = {
+    return {
         name: name,
+        id: name,
         width: width,
         height: height,
-        id: name,
         x: x,
         y: y,
         vx: 0, 
@@ -77,8 +67,31 @@ function makeEntity(name, x, y, width, height)
         energy: 100,
         emotion: 'neutral'
     };
+}
 
-    return entityData;
+// Only handles the DOM element (The Monitor)
+function createEntityVisual(data)
+{
+    let visual = ce('div');
+    visual.id = data.id;
+    visual.style.position = 'absolute';
+    visual.style.width = data.width + 'px';
+    visual.style.height = data.height + 'px';
+    visual.style.backgroundColor = 'rgb(0, 255, 255)'; 
+    ba(visual);
+}
+
+// The Factory: What we actually call to spawn a ship
+function spawnEntity(name, x, y, width, height)
+{
+    // Generate the pure data
+    let newData = createEntityData(name, x, y, width, height);
+    
+    // Generate the visual using that data
+    createEntityVisual(newData);
+    
+    // Inject it into the world object
+    world[name] = newData;
 }
 
 //----//
@@ -115,7 +128,6 @@ function updateVisuals()
 //----//
 
 // collisionSystem.js
-
 function collisionSystem()
 {
     // Convert the world object into an array of entities for the math
@@ -150,8 +162,7 @@ function collisionSystem()
                 let diffX = center1X - center2X;
                 let diffY = center1Y - center2Y;
 
-                // Determine the axis of least penetration (which way to push them)
-                // We divide by width/height to normalize the overlap for rectangular objects
+                // Determine the axis of least penetration
                 if (Math.abs(diffX) / (e1.width + e2.width) > Math.abs(diffY) / (e1.height + e2.height))
                 {
                     // HORIZONTAL COLLISION
@@ -177,6 +188,7 @@ function collisionSystem()
                 else
                 {
                     // VERTICAL COLLISION
+
                     // Separate them so they don't stick
                     let overlapY = (e1.height/2 + e2.height/2) - Math.abs(diffY);
                     if (diffY > 0)
@@ -203,7 +215,6 @@ function collisionSystem()
 //----//
 
 // boundarySystem.js
-
 function boundarySystem() 
 {
     let screenWidth = window.innerWidth;
@@ -217,25 +228,25 @@ function boundarySystem()
         if (element.x < 0)
         {
             element.x = 0; 
-            element.vx = element.vx * -1; 
+            element.vx = -element.vx; 
         }
         // RIGHT WALL CHECK
         else if (element.x + element.width > screenWidth)
         {
             element.x = screenWidth - element.width; 
-            element.vx = element.vx * -1; 
+            element.vx = -element.vx; 
         }
         // TOP WALL CHECK
         if (element.y < 0)
         {
             element.y = 0;
-            element.vy = element.vy * -1;
+            element.vy = -element.vy;
         }
         // BOTTOM WALL CHECK
         else if (element.y + element.height > screenHeight)
         {
             element.y = screenHeight - element.height;
-            element.vy = element.vy * -1;
+            element.vy = -element.vy;
         }
     }
 }
@@ -260,16 +271,16 @@ function gameLoop()
 
 function whenLoaded()
 {
-    world.enterprise = makeEntity('Enterprise', 50, 100, 50, 50);
+    // Use the Factory to generate both data and visual at once
+    spawnEntity('Enterprise', 50, 100, 50, 50);
+    spawnEntity('Defiant', 200, 100, 50, 50);
 
-    world.defiant = makeEntity('Defiant', 200, 100, 50, 50);
+    // Capitalize them here to match the names passed above!
+    world.Enterprise.vx = 1.1;
+    world.Enterprise.vy = -1.1;
 
-    // Give it a gentle push so velocity takes over in the loop
-    world.enterprise.vx = 1.1;
-    world.enterprise.vy = -1.1;
-
-    world.defiant.vx = -1.1;
-    world.defiant.vy = 1.1;
+    world.Defiant.vx = -1.1;
+    world.Defiant.vy = 1.1;
 
     // Start the engine
     gameLoop();

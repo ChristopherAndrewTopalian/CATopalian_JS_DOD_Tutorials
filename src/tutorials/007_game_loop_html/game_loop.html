@@ -1,0 +1,303 @@
+<!-- Dedicated to God the Father -->
+<!-- All Rights Reserved Christopher Andrew Topalian Copyright 2000-2026 -->
+<!-- https://github.com/ChristopherTopalian -->
+<!-- https://github.com/ChristopherAndrewTopalian -->
+<!-- game_loop.html -->
+
+<!DOCTYPE html>
+<html lang = 'en'>
+<head>
+<title> Game Loop </title>
+
+<meta charset = 'UTF-8'>
+
+<meta name = 'viewport' content = 'width=device-width, initial-scale=1.0'>
+
+<style>
+
+body
+{
+    background-color: rgb(30, 30, 30);
+    color: rgb(255, 255, 255);
+}
+
+</style>
+
+<script>
+
+let world = {};
+
+//----//
+
+// shortcuts.js
+
+function ge(whichId)
+{
+    let result = document.getElementById(whichId);
+    return result;
+}
+
+function ce(whichType)
+{
+    let result = document.createElement(whichType);
+    return result;
+}
+
+function ba(whichElement)
+{
+    let result = document.body.append(whichElement);
+    return result;
+}
+
+//----//
+
+// Only handles the math and logic (The Truth)
+function createEntityData(name, x, y, width, height, texture)
+{
+    return {
+        name: name,
+        id: name,
+        width: width,
+        height: height,
+        x: x,
+        y: y,
+        vx: 0, 
+        vy: 0,  
+        shields: 100,
+        energy: 100,
+        emotion: 'neutral',
+        texture: texture
+    };
+}
+
+// Only handles the DOM element (The Monitor)
+function createEntityVisual(data)
+{
+    let visual = ce('div');
+    visual.id = data.id;
+    visual.style.position = 'absolute';
+    visual.style.width = data.width + 'px';
+    visual.style.height = data.height + 'px';
+    visual.style.backgroundImage = `url('${data.texture}')`;
+    visual.style.backgroundSize = '100% 100%';
+    visual.style.padding = '0px';
+    visual.style.margin = '0px';
+    ba(visual);
+}
+
+// The Factory: What we actually call to spawn a ship
+function spawnEntity(name, x, y, width, height, texture)
+{
+    // Generate the pure data (passing the texture along)
+    let newData = createEntityData(name, x, y, width, height, texture);
+    
+    // Generate the visual using that data
+    createEntityVisual(newData);
+    
+    // Inject it into the world object
+    world[name] = newData;
+}
+
+//----//
+
+// movementSystem.js
+function movementSystem()
+{
+    for (let i in world)
+    {
+        let currentData = world[i];
+
+        // Apply the velocity to the pure data coordinates
+        currentData.x += currentData.vx;
+        currentData.y += currentData.vy;
+    }
+}
+
+//----//
+
+// only updates the screen
+function updateVisuals()
+{
+    for (let i in world)
+    {
+        let currentData = world[i];
+        let entity = ge(currentData.id);
+
+        // Paint the pure data onto the physical monitor
+        entity.style.left = currentData.x + 'px';
+        entity.style.top = currentData.y + 'px';
+    }
+}
+
+//----//
+
+// collisionSystem.js
+function collisionSystem()
+{
+    // Convert the world object into an array of entities for the math
+    let entities = Object.values(world); 
+    let count = entities.length;
+
+    // Loop through every unique pair of entities
+    for (let i = 0; i < count; i++)
+    {
+        for (let j = i + 1; j < count; j++)
+        {
+            let e1 = entities[i];
+            let e2 = entities[j];
+
+            // AABB Collision Math: Check if the boxes overlap
+            let isColliding = (
+                e1.x < e2.x + e2.width &&
+                e1.x + e1.width > e2.x &&
+                e1.y < e2.y + e2.height &&
+                e1.y + e1.height > e2.y
+            );
+
+            if (isColliding)
+            {
+                // Calculate the center points of both objects
+                let center1X = e1.x + (e1.width / 2);
+                let center1Y = e1.y + (e1.height / 2);
+                let center2X = e2.x + (e2.width / 2);
+                let center2Y = e2.y + (e2.height / 2);
+
+                // Calculate the distance between centers
+                let diffX = center1X - center2X;
+                let diffY = center1Y - center2Y;
+
+                // Determine the axis of least penetration
+                if (Math.abs(diffX) / (e1.width + e2.width) > Math.abs(diffY) / (e1.height + e2.height))
+                {
+                    // HORIZONTAL COLLISION
+
+                    // Separate them so they don't stick
+                    let overlapX = (e1.width/2 + e2.width/2) - Math.abs(diffX);
+                    if (diffX > 0)
+                    {
+                        e1.x += overlapX / 2;
+                        e2.x -= overlapX / 2;
+                    }
+                    else
+                    {
+                        e1.x -= overlapX / 2;
+                        e2.x += overlapX / 2;
+                    }
+
+                    // Swap horizontal velocities (Elastic Bounce)
+                    let tempVx = e1.vx;
+                    e1.vx = e2.vx;
+                    e2.vx = tempVx;
+                }
+                else
+                {
+                    // VERTICAL COLLISION
+
+                    // Separate them so they don't stick
+                    let overlapY = (e1.height/2 + e2.height/2) - Math.abs(diffY);
+                    if (diffY > 0)
+                    {
+                        e1.y += overlapY / 2;
+                        e2.y -= overlapY / 2;
+                    }
+                    else
+                    {
+                        e1.y -= overlapY / 2;
+                        e2.y += overlapY / 2;
+                    }
+
+                    // Swap vertical velocities (Elastic Bounce)
+                    let tempVy = e1.vy;
+                    e1.vy = e2.vy;
+                    e2.vy = tempVy;
+                }
+            }
+        }
+    }
+}
+
+//----//
+
+// boundarySystem.js
+function boundarySystem() 
+{
+    let screenWidth = window.innerWidth;
+    let screenHeight = window.innerHeight;
+
+    for (let i in world)
+    {
+        let element = world[i];
+
+        // LEFT WALL CHECK
+        if (element.x < 0)
+        {
+            element.x = 0; 
+            element.vx = -element.vx; 
+        }
+        // RIGHT WALL CHECK
+        else if (element.x + element.width > screenWidth)
+        {
+            element.x = screenWidth - element.width; 
+            element.vx = -element.vx; 
+        }
+        // TOP WALL CHECK
+        if (element.y < 0)
+        {
+            element.y = 0;
+            element.vy = -element.vy;
+        }
+        // BOTTOM WALL CHECK
+        else if (element.y + element.height > screenHeight)
+        {
+            element.y = screenHeight - element.height;
+            element.vy = -element.vy;
+        }
+    }
+}
+
+//----//
+
+// define the game loop
+function gameLoop()
+{
+    // Calculate the new math
+    movementSystem();
+    boundarySystem();
+    collisionSystem();
+
+    // Draw the new math
+    updateVisuals();
+
+    requestAnimationFrame(gameLoop);
+}
+
+//----//
+
+function whenLoaded()
+{
+    // Use the Factory to generate both data and visual at once
+    spawnEntity('Enterprise', 50, 100, 50, 25, 'textures/drones/drone_001.webp');
+
+    spawnEntity('Defiant', 200, 100, 50, 25, 'textures/drones/drone_002.webp');
+
+    // Capitalize them here to match the names passed above!
+    world.Enterprise.vx = 1.1;
+    world.Enterprise.vy = -1.1;
+
+    world.Defiant.vx = -1.1;
+    world.Defiant.vy = 1.1;
+
+    // Start the engine
+    gameLoop();
+}
+
+</script>
+
+</head>
+
+<body onload = "whenLoaded();">
+
+</body>
+
+</html>
+
