@@ -177,12 +177,12 @@ function collisionSystem()
                 let diffX = center1X - center2X;
                 let diffY = center1Y - center2Y;
 
+                e1.contacts += 1;
+                e2.contacts += 1;
+
                 // Determine the axis of least penetration
                 if (Math.abs(diffX) / (e1.width + e2.width) > Math.abs(diffY) / (e1.height + e2.height))
                 {
-                    e1.contacts += 1;
-                    e2.contacts += 1;
-
                     // HORIZONTAL COLLISION
 
                     // Separate them so they don't stick
