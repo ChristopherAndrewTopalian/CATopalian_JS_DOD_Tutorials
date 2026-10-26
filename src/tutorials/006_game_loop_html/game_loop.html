@@ -81,6 +81,8 @@ function makeEntity(name, x, y, width, height)
     return entityData;
 }
 
+//----//
+
 // movementSystem.js
 function movementSystem()
 {
@@ -93,6 +95,8 @@ function movementSystem()
         currentData.y += currentData.vy;
     }
 }
+
+//----//
 
 // only updates the screen
 function updateVisuals()
@@ -108,17 +112,21 @@ function updateVisuals()
     }
 }
 
+//----//
+
 // collisionSystem.js
 
-function collisionSystem() {
-    // 1. Convert the world object into an array of entities for the math
+function collisionSystem()
+{
+    // Convert the world object into an array of entities for the math
     let entities = Object.values(world); 
     let count = entities.length;
 
-    // 2. Loop through every unique pair of entities
-    for (let i = 0; i < count; i++) {
-        for (let j = i + 1; j < count; j++) {
-            
+    // Loop through every unique pair of entities
+    for (let i = 0; i < count; i++)
+    {
+        for (let j = i + 1; j < count; j++)
+        {
             let e1 = entities[i];
             let e2 = entities[j];
 
