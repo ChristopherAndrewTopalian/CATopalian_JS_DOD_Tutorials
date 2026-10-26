@@ -82,7 +82,9 @@ function createEntityVisual(data)
     visual.style.backgroundSize = '100% 100%';
     visual.style.padding = '0px';
     visual.style.margin = '0px';
-    ba(visual);
+    // Attach to the universe map, not the screen
+    ge('gameBoard').append(visual);
+    return visual;
 }
 
 // The Factory: What we actually call to spawn a ship
@@ -273,8 +275,29 @@ function gameLoop()
 
 //----//
 
+function createGameBoard()
+{
+    let gameBoard = ce('div');
+    gameBoard.id = 'gameBoard';
+    
+    // Lock the board to the top left of the universe
+    gameBoard.style.position = 'absolute';
+    gameBoard.style.top = '0px';
+    gameBoard.style.left = '0px';
+    
+    // For now, make it fill the screen (we can make this 10,000px later!)
+    gameBoard.style.width = '100vw';
+    gameBoard.style.height = '100vh';
+    
+    ba(gameBoard);
+}
+
+//----//
+
 function whenLoaded()
 {
+    createGameBoard();
+
     // Use the Factory to generate both data and visual at once
     spawnEntity('Enterprise', 50, 100, 50, 25, 'textures/drones/drone_001.webp');
 

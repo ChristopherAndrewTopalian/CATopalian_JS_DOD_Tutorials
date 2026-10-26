@@ -77,8 +77,15 @@ function createEntityVisual(data)
     visual.style.position = 'absolute';
     visual.style.width = data.width + 'px';
     visual.style.height = data.height + 'px';
-    visual.style.backgroundColor = 'rgb(0, 255, 255)'; 
-    ba(visual);
+    visual.style.backgroundColor = 'rgb(0, 255, 255)';
+    //visual.style.backgroundImage = `url('${data.texture}')`;
+    //visual.style.backgroundSize = '100% 100%';
+    visual.style.padding = '0px';
+    visual.style.margin = '0px';
+    
+    // Attach to the universe map, not the screen
+    ge('gameBoard').append(visual);
+    return visual;
 }
 
 // The Factory: What we actually call to spawn a ship
@@ -233,7 +240,7 @@ function boundarySystem()
         // RIGHT WALL CHECK
         else if (element.x + element.width > screenWidth)
         {
-            element.x = screenWidth - element.width; 
+            element.x = screenWidth - element.width;
             element.vx = -element.vx; 
         }
         // TOP WALL CHECK
@@ -269,8 +276,27 @@ function gameLoop()
 
 //----//
 
+function createGameBoard()
+{
+    let gameBoard = ce('div');
+    gameBoard.id = 'gameBoard';
+    
+    // Lock the board to the top left of the universe
+    gameBoard.style.position = 'absolute';
+    gameBoard.style.top = '0px';
+    gameBoard.style.left = '0px';
+    
+    // For now, make it fill the screen (we can make this 10,000px later!)
+    gameBoard.style.width = '100vw';
+    gameBoard.style.height = '100vh';
+    
+    ba(gameBoard);
+}
+
 function whenLoaded()
 {
+    createGameBoard();
+
     // Use the Factory to generate both data and visual at once
     spawnEntity('Enterprise', 50, 100, 50, 50);
     spawnEntity('Defiant', 200, 100, 50, 50);
