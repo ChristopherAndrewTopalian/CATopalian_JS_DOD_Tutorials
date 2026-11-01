@@ -154,10 +154,26 @@ function siSystem()
         {
             // Math.floor divides time into 4 chunks. % 4 forces it to loop 0, 1, 2, 3.
             let phase = Math.floor(entity.si.tick / 60) % 4; // Changes every 60 frames (1 sec)
-            if (phase === 0) { entity.vx = 2; entity.vy = 0; }      // Right
-            else if (phase === 1) { entity.vx = 0; entity.vy = 2; } // Down
-            else if (phase === 2) { entity.vx = -2; entity.vy = 0; } // Left
-            else if (phase === 3) { entity.vx = 0; entity.vy = -2; } // Up
+            if (phase === 0)
+            {
+                entity.vx = 2;
+                entity.vy = 0;
+            }      // Right
+            else if (phase === 1)
+            {
+                entity.vx = 0;
+                entity.vy = 2;
+            } // Down
+            else if (phase === 2)
+            {
+                entity.vx = -2;
+                entity.vy = 0;
+            } // Left
+            else if (phase === 3)
+            {
+                entity.vx = 0;
+                entity.vy = -2;
+            } // Up
         } 
         else if (entity.si.type === 'circle') 
         {
