@@ -188,9 +188,21 @@ function siSystem()
         else if (entity.si.type === 'triangle') 
         {
             let phase = Math.floor(entity.si.tick / 60) % 3; // Changes every 60 frames
-            if (phase === 0) { entity.vx = 2; entity.vy = -2; }      // Up-Right
-            else if (phase === 1) { entity.vx = 2; entity.vy = 2; }  // Down-Right
-            else if (phase === 2) { entity.vx = -4; entity.vy = 0; } // Hard Left
+            if (phase === 0)
+            {
+                entity.vx = 2;
+                entity.vy = -2;
+            }      // Up-Right
+            else if (phase === 1)
+            {
+                entity.vx = 2;
+                entity.vy = 2;
+            }  // Down-Right
+            else if (phase === 2)
+            {
+                entity.vx = -4;
+                entity.vy = 0;
+            } // Hard Left
         }
     }
 }
