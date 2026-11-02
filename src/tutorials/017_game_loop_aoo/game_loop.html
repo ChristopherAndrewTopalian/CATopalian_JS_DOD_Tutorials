@@ -1,0 +1,394 @@
+<!-- Dedicated to God the Father -->
+<!-- All Rights Reserved Christopher Andrew Topalian Copyright 2000-2026 -->
+<!-- https://github.com/ChristopherTopalian -->
+<!-- https://github.com/ChristopherAndrewTopalian -->
+<!-- game_loop.html -->
+
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<title> Game Loop AOO - Movement & Patterns </title>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<style>
+body
+{
+    background-color: rgb(30, 30, 30);
+    color: rgb(255, 255, 255);
+    overflow: hidden;
+    margin: 0;
+}
+</style>
+
+<script>
+
+let world = [];
+
+// The Input State Tracker
+let keys = { w: false, a: false, s: false, d: false };
+
+window.addEventListener('keydown', function(e) {
+    if (e.key === 'w' || e.key === 'W') keys.w = true;
+    if (e.key === 'a' || e.key === 'A') keys.a = true;
+    if (e.key === 's' || e.key === 'S') keys.s = true;
+    if (e.key === 'd' || e.key === 'D') keys.d = true;
+});
+
+window.addEventListener('keyup', function(e) {
+    if (e.key === 'w' || e.key === 'W') keys.w = false;
+    if (e.key === 'a' || e.key === 'A') keys.a = false;
+    if (e.key === 's' || e.key === 'S') keys.s = false;
+    if (e.key === 'd' || e.key === 'D') keys.d = false;
+});
+
+//----//
+
+function ge(whichId) { return document.getElementById(whichId); }
+
+function ce(whichType) { return document.createElement(whichType); }
+
+function ba(whichElement) { return document.body.append(whichElement); }
+
+function fibn(whichArray, whichName)
+{
+    let count = whichArray.length;
+    for (let i = 0; i < count; i++)
+    {
+        if (whichArray[i].name === whichName) return i;
+    }
+    return -1;
+}
+
+//----//
+
+function createEntityData(name, x, y, width, height, bgcolor, texture)
+{
+    return {
+        name: name,
+        id: name,
+        width: width,
+        height: height,
+        bgcolor: bgcolor,
+        texture: texture,
+        x: x,
+        y: y,
+        vx: 0, 
+        vy: 0,  
+        shields: 100,
+        energy: 100,
+        emotion: 'neutral',
+        contacts: 0
+    };
+}
+
+function createEntityVisual(data)
+{
+    let visual = ce('div');
+    visual.id = data.id;
+    visual.textContent = data.id;
+    visual.style.position = 'absolute';
+    visual.style.width = data.width + 'px';
+    visual.style.height = data.height + 'px';
+    //visual.style.backgroundColor = data.bgcolor;
+    visual.style.backgroundImage = `url('${data.texture}')`;
+    visual.style.backgroundSize = '100% 100%';
+    visual.style.padding = '0px';
+    visual.style.margin = '0px';
+    visual.style.borderRadius = '50%';
+    visual.style.color = 'black';
+    visual.style.textAlign = 'center';
+    visual.style.lineHeight = data.height + 'px';
+    
+    // Lock layout to 0 to prevent Layout Thrashing
+    visual.style.left = '0px'; 
+    visual.style.top = '0px';
+    visual.style.willChange = 'transform';
+    
+    ge('gameBoard').append(visual);
+    
+    // Cache the DOM element
+    data.element = visual; 
+    return visual;
+}
+
+function spawnEntity(name, x, y, width, height, bgcolor, texture)
+{
+    let newData = createEntityData(name, x, y, width, height, bgcolor, texture);
+    createEntityVisual(newData);
+    world.push(newData);
+}
+
+//----//
+
+// The Player Input System
+function playerInputSystem()
+{
+    let playerIndex = fibn(world, 'sixteen'); // The Cue Ball
+    if (playerIndex === -1) return;
+    
+    let player = world[playerIndex];
+    let accel = 0.5;
+    let friction = 0.92; // Slowly kills velocity so you don't slide forever
+
+    // Apply Friction
+    player.vx *= friction;
+    player.vy *= friction;
+
+    // Apply Keyboard Acceleration
+    if (keys.w) player.vy -= accel;
+    if (keys.s) player.vy += accel;
+    if (keys.a) player.vx -= accel;
+    if (keys.d) player.vx += accel;
+}
+
+// SI Pattern System
+function siSystem()
+{
+    let count = world.length;
+    for (let i = 0; i < count; i++)
+    {
+        let entity = world[i];
+        
+        // Skip entities that don't have SI instructions
+        if (!entity.si) continue;
+
+        // Advance the internal clock for this entity
+        entity.si.tick++; 
+
+        if (entity.si.type === 'square') 
+        {
+            // Math.floor divides time into 4 chunks. % 4 forces it to loop 0, 1, 2, 3.
+            let phase = Math.floor(entity.si.tick / 60) % 4; // Changes every 60 frames (1 sec)
+            if (phase === 0)
+            {
+                entity.vx = 2;
+                entity.vy = 0;
+            }      // Right
+            else if (phase === 1)
+            {
+                entity.vx = 0;
+                entity.vy = 2;
+            } // Down
+            else if (phase === 2)
+            {
+                entity.vx = -2;
+                entity.vy = 0;
+            } // Left
+            else if (phase === 3)
+            {
+                entity.vx = 0;
+                entity.vy = -2;
+            } // Up
+        } 
+        else if (entity.si.type === 'circle') 
+        {
+            // Sine and Cosine calculate perfect orbital velocities based on time
+            let speed = 2;
+            let time = entity.si.tick * 0.05; // 0.05 controls how fast it orbits
+            entity.vx = Math.cos(time) * speed;
+            entity.vy = Math.sin(time) * speed;
+        }
+        else if (entity.si.type === 'triangle') 
+        {
+            let phase = Math.floor(entity.si.tick / 60) % 3; // Changes every 60 frames
+            if (phase === 0)
+            {
+                entity.vx = 2;
+                entity.vy = -2;
+            }      // Up-Right
+            else if (phase === 1)
+            {
+                entity.vx = 2;
+                entity.vy = 2;
+            }  // Down-Right
+            else if (phase === 2)
+            {
+                entity.vx = -4;
+                entity.vy = 0;
+            } // Hard Left
+        }
+    }
+}
+
+//----//
+
+function movementSystem()
+{
+    let count = world.length;
+    for (let i = 0; i < count; i++)
+    {
+        world[i].x += world[i].vx;
+        world[i].y += world[i].vy;
+    }
+}
+
+function collisionSystem()
+{
+    let count = world.length;
+    for (let i = 0; i < count; i++)
+    {
+        for (let j = i + 1; j < count; j++)
+        {
+            let e1 = world[i];
+            let e2 = world[j];
+
+            let isColliding = (
+                e1.x < e2.x + e2.width &&
+                e1.x + e1.width > e2.x &&
+                e1.y < e2.y + e2.height &&
+                e1.y + e1.height > e2.y
+            );
+
+            if (isColliding)
+            {
+                let center1X = e1.x + (e1.width / 2);
+                let center1Y = e1.y + (e1.height / 2);
+                let center2X = e2.x + (e2.width / 2);
+                let center2Y = e2.y + (e2.height / 2);
+
+                let diffX = center1X - center2X;
+                let diffY = center1Y - center2Y;
+
+                e1.contacts += 1;
+                e2.contacts += 1;
+
+                if (Math.abs(diffX) / (e1.width + e2.width) > Math.abs(diffY) / (e1.height + e2.height))
+                {
+                    let overlapX = ((e1.width/2 + e2.width/2) - Math.abs(diffX)) * 1.05;
+                    if (diffX > 0) { e1.x += overlapX / 2; e2.x -= overlapX / 2; }
+                    else { e1.x -= overlapX / 2; e2.x += overlapX / 2; }
+
+                    let tempVx = e1.vx;
+                    e1.vx = e2.vx + (Math.random() * 0.01 - 0.005);
+                    e2.vx = tempVx + (Math.random() * 0.01 - 0.005);
+                }
+                else
+                {
+                    let overlapY = ((e1.height/2 + e2.height/2) - Math.abs(diffY)) * 1.05;
+                    if (diffY > 0) { e1.y += overlapY / 2; e2.y -= overlapY / 2; }
+                    else { e1.y -= overlapY / 2; e2.y += overlapY / 2; }
+
+                    let tempVy = e1.vy;
+                    e1.vy = e2.vy + (Math.random() * 0.01 - 0.005);
+                    e2.vy = tempVy + (Math.random() * 0.01 - 0.005);
+                }
+            }
+        }
+    }
+}
+
+function boundarySystem() 
+{
+    let screenWidth = window.innerWidth;
+    let screenHeight = window.innerHeight;
+    let count = world.length;
+
+    for (let i = 0; i < count; i++)
+    {
+        let element = world[i];
+
+        if (element.x < 0) { element.x = 0; element.vx = -element.vx; }
+        else if (element.x + element.width > screenWidth) { element.x = screenWidth - element.width; element.vx = -element.vx; }
+        
+        if (element.y < 0) { element.y = 0; element.vy = -element.vy; }
+        else if (element.y + element.height > screenHeight) { element.y = screenHeight - element.height; element.vy = -element.vy; }
+    }
+}
+
+function updateVisuals()
+{
+    let count = world.length;
+    for (let i = 0; i < count; i++)
+    {
+        let data = world[i];
+        // Bypassing Layout Thrashing
+        data.element.style.transform = `translate3d(${data.x}px, ${data.y}px, 0)`;
+        
+        if (data.element.textContent != data.contacts) {
+            data.element.textContent = data.contacts;
+        }
+    }
+}
+
+//----//
+
+function gameLoop()
+{
+    // The Order of Operations is critical here!
+    playerInputSystem(); // 1. Check intent
+    siSystem();          // 2. Check SI logic
+    movementSystem();    // 3. Apply all math
+    boundarySystem();    // 4. Trap in walls
+    collisionSystem();   // 5. Bounce off others
+    updateVisuals();     // 6. Draw it
+    
+    requestAnimationFrame(gameLoop);
+}
+
+//----//
+
+function createGameBoard()
+{
+    let gameBoard = ce('div');
+    gameBoard.id = 'gameBoard';
+    gameBoard.style.position = 'absolute';
+    gameBoard.style.top = '0px';
+    gameBoard.style.left = '0px';
+    gameBoard.style.width = '100vw';
+    gameBoard.style.height = '100vh';
+    ba(gameBoard);
+}
+
+function whenLoaded()
+{
+    createGameBoard();
+
+    spawnEntity('one', 50, 100, 30, 30, 'yellow', 'textures/drones/drone_001.webp');
+
+    spawnEntity('two', 150, 100, 30, 30, 'blue', 'textures/drones/drone_002.webp');
+
+    spawnEntity('three', 250, 100, 30, 30, 'red', 'textures/drones/drone_003.webp');
+
+    spawnEntity('four', 350, 100, 30, 30, 'purple', 'textures/drones/drone_004.webp');
+
+    spawnEntity('five', 450, 100, 30, 30, 'orange', 'textures/drones/drone_005.webp');
+
+    spawnEntity('six', 550, 100, 30, 30, 'green', 'textures/drones/drone_006.webp');
+
+    spawnEntity('seven', 650, 100, 30, 30, 'brown', 'textures/drones/drone_007.webp');
+
+    spawnEntity('eight', 750, 100, 30, 30, 'gray', 'textures/drones/drone_008.webp');
+    
+
+
+    spawnEntity('nine', 50, 250, 30, 30, 'rgb(200, 200, 0)', 'textures/drones/drone_001.webp');
+
+    spawnEntity('ten', 150, 250, 30, 30, 'rgb(0, 200, 200)', 'textures/drones/drone_002.webp');
+
+    spawnEntity('eleven', 250, 250, 30, 30, 'rgb(200, 0, 0)', 'textures/drones/drone_003.webp');
+
+    spawnEntity('twelve', 350, 250, 30, 30, 'rgb(200, 100, 200)', 'textures/drones/drone_004.webp');
+
+    spawnEntity('thirteen', 450, 250, 30, 30, 'rgb(100, 200, 0)', 'textures/drones/drone_005.webp');
+
+    spawnEntity('fourteen', 550, 250, 30, 30, 'rgb(200, 200, 0)', 'textures/drones/drone_006.webp');
+
+    spawnEntity('fifteen', 650, 250, 30, 30, 'rgb(0, 200, 0)', 'textures/drones/drone_007.webp');
+    
+    // The Cue Ball!
+    spawnEntity('sixteen', 350, 400, 30, 30, 'white', 'textures/drones/drone_008.webp'); 
+
+    // Inject SI commands into the specific entities
+    world[fibn(world, 'one')].si = { type: 'square', tick: 0 };
+    world[fibn(world, 'two')].si = { type: 'circle', tick: 0 };
+    world[fibn(world, 'three')].si = { type: 'triangle', tick: 0 };
+
+    gameLoop();
+}
+
+</script>
+</head>
+<body onload="whenLoaded();">
+</body>
+</html>
+
