@@ -1,0 +1,1086 @@
+<!-- Dedicated to God the Father -->
+<!-- All Rights Reserved Christopher Andrew Topalian Copyright 2000-2026 -->
+<!-- https://github.com/ChristopherTopalian -->
+<!-- https://github.com/ChristopherAndrewTopalian -->
+<!-- game_loop_aoo.html -->
+
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<title> Game Loop AOO </title>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+
+<style>
+
+body
+{
+    background-color: rgb(30, 30, 30);
+    color: rgb(255, 255, 255);
+    overflow: hidden;
+    margin: 0;
+    background-image: url('textures/sky.jpg');
+    background-size: auto 100vh;
+    
+    animation: driftClouds 50s linear infinite; /* Slowed down for bigger clouds */
+    overflow: hidden;
+}
+
+@keyframes driftClouds {
+    from {
+        background-position: 0px 0px; 
+    }
+    to {
+        /* 
+           Because the image is scaled to 100vh tall, and it is a perfect square, 
+           it is exactly 100vh wide. We move it exactly that much to perfectly loop */
+        background-position: -100vh 0px; 
+    }
+}
+
+@keyframes driftGround {
+    from {
+        background-position: 0px 0px; 
+    }
+    to {
+        /* using a seamless repeating texture */
+        background-position: -1000px 0px; 
+    }
+}
+
+</style>
+
+<script>
+
+// ===
+// WORLD VARIABLES
+// ===
+let world = [];
+
+let groundY = 400;
+
+let worldWidth = 3000;
+
+let camera = {
+    x: 0,
+    y: 0,
+    mode: 'follow' // 'follow' or 'stationary'
+};
+
+//----//
+
+// ===
+// SHORTCUTS
+// ===
+
+function ge(whichId)
+{
+    return document.getElementById(whichId);
+}
+
+function ce(whichType)
+{
+    return document.createElement(whichType);
+}
+
+function ba(whichElement)
+{
+    return document.body.append(whichElement);
+}
+
+function fibn(whichArray, whichName)
+{
+    for (let i = 0; i < whichArray.length; i++)
+    {
+        if (whichArray[i].name === whichName) return i;
+    }
+    return -1;
+}
+
+// ===
+// MUSIC SYSTEM
+// ===
+
+// Create a new Audio object
+const bgm = new Audio('songs/Before_the_Winter_Shore.mp3');
+
+// Set loop to true so the track repeats continuously
+bgm.loop = true;
+
+// Set a reasonable volume (0.0 to 1.0)
+bgm.volume = 0.5;
+
+// Function to start music safely after a user gesture
+function startBackgroundMusic()
+{
+    if (bgm.paused)
+    {
+        bgm.play().catch(error => {
+            console.log("Audio playback failed:", error);
+        });
+    }
+}
+
+// Trigger playback on the first user interaction (e.g., keypress or click)
+window.addEventListener('keydown', startBackgroundMusic, { once: true });
+
+window.addEventListener('click', startBackgroundMusic, { once: true });
+
+// Pause or reset when game state changes
+function pauseMusic() {
+    bgm.pause();
+}
+
+function restartMusic() {
+    bgm.pause();
+    bgm.currentTime = 0;
+    bgm.play();
+}
+
+//----//
+
+// ===
+// CONTROLS
+// ===
+
+let keys = {
+    w: false,
+    a: false,
+    s: false,
+    d: false,
+    space: false
+};
+
+window.addEventListener('keydown', function(e)
+{
+    if (e.key === 'w' || e.key === 'W')
+    {
+        keys.w = true;
+    }
+    if (e.key === 'a' || e.key === 'A')
+    {
+        keys.a = true;
+    }
+    if (e.key === 's' || e.key === 'S')
+    {
+        keys.s = true;
+    }
+    if (e.key === 'd' || e.key === 'D')
+    {
+        keys.d = true;
+    }
+    if (e.key === ' ')
+    {
+        keys.space = true;
+    }
+});
+
+window.addEventListener('keyup', function(e) {
+    if (e.key === 'w' || e.key === 'W')
+    {
+        keys.w = false;
+    }
+    if (e.key === 'a' || e.key === 'A')
+    {
+        keys.a = false;
+    }
+    if (e.key === 's' || e.key === 'S')
+    {
+        keys.s = false;
+    }
+
+    if (e.key === 'd' || e.key === 'D')
+    {
+        keys.d = false;
+    }
+
+    if (e.key === ' ')
+    {
+        keys.space = false;
+    }
+});
+
+//----//
+
+// ===
+// ENTITY ELEMENT CREATION
+// ===
+
+function createEntityVisual(data)
+{
+    let visual = ce('div');
+    visual.id = data.id;
+    
+    // Only show text if it is a ship/drone (NOT a bullet)
+    //visual.textContent = data.isBullet ? '' : data.id;
+    if (data.isBullet)
+    {
+        visual.textContent = '';
+    }
+    else
+    {
+        visual.textContent = data.id;
+    }
+    
+    visual.style.position = 'absolute';
+    visual.style.width = data.width + 'px';
+    visual.style.height = data.height + 'px';
+    visual.style.zIndex = 4;
+    
+    // If it has a texture, use the texture and ignore bgcolor.
+    // If it is a bullet, just use the bgcolor.
+    if (data.texture)
+    {
+        visual.style.backgroundImage = `url('${data.texture}')`;
+        visual.style.backgroundSize = 'contain';
+
+        visual.style.backgroundRepeat = 'no-repeat';
+        visual.style.backgroundPosition = 'center bottom'; // Anchors feet to the bottom
+    }
+    else
+    {
+        visual.style.backgroundColor = data.bgcolor;
+    }
+    
+    visual.style.padding = '0px';
+    visual.style.margin = '0px';
+    //visual.style.borderRadius = '50%';
+    visual.style.color = 'black';
+    visual.style.textAlign = 'center';
+    visual.style.lineHeight = data.height + 'px';
+    
+    visual.style.left = '0px'; 
+    visual.style.top = '0px';
+    visual.style.willChange = 'transform';
+    
+    ge('gameBoard').append(visual);
+    
+    data.element = visual; 
+    return visual;
+}
+
+// The generic spawner for injecting pre-built data objects
+function spawnData(dataObject)
+{
+    createEntityVisual(dataObject);
+    world.push(dataObject);
+    return dataObject;
+}
+
+//----//
+
+/*
+function playerInputSystem()
+{
+    let playerIndex = fibn(world, 'Nate');
+
+    if (playerIndex === -1)
+    {
+        return;
+    }
+    
+    let player = world[playerIndex];
+    let accel = 0.5;
+    let friction = 0.92; 
+
+    player.vx *= friction;
+    player.vy *= friction;
+
+    if (keys.w)
+    {
+        player.vy -= accel;
+    }
+    if (keys.s)
+    {
+        player.vy += accel;
+    }
+    if (keys.a)
+    {
+        player.vx -= accel;
+    }
+    if (keys.d)
+    {
+        player.vx += accel;
+    }
+    
+    if (!player.lastShot)
+    {
+        player.lastShot = 0;
+    }
+    
+    if (keys.space && Date.now() - player.lastShot > 150)
+    {
+        player.lastShot = Date.now();
+        let bulletId = 'bullet_' + Date.now();
+        
+        // Build the complete data FIRST
+        let bulletData = {
+            name: bulletId,
+            id: bulletId,
+            width: 10,
+            height: 10,
+            bgcolor: 'aqua',
+            texture: '',
+            x: player.x + player.width,
+            y: player.y + 10,
+            vx: 8, 
+            vy: 0,
+            shields: 1,
+            energy: 1,
+            emotion: 'neutral',
+            contacts: 0,
+            isBullet: true, // It is flagged BEFORE the DOM sees it
+            life: 120
+        };
+        
+        // THEN spawn it
+        spawnData(bulletData);
+    }
+}
+*/
+
+function playerInputSystem()
+{
+    let playerIndex = fibn(world, 'Nate');
+
+    if (playerIndex === -1)
+    {
+        return;
+    }
+
+    let player = world[playerIndex];
+    let accel = 0.6;
+    let friction = 0.88;
+
+    // Horizontal friction only (so gravity stays crisp)
+    player.vx *= friction;
+
+    if (keys.a)
+    {
+        player.vx -= accel;
+    }
+    if (keys.d)
+    {
+        player.vx += accel;
+    }
+
+    // Jump only when standing on the floor or an obstacle
+    if (keys.w && player.isGrounded === true)
+    {
+        player.vy = player.jumpForce;
+        player.isGrounded = false;
+    }
+
+    // Variable jump height: releasing W early cuts the jump short
+    if (!keys.w && player.vy < -5)
+    {
+        player.vy *= 0.5;
+    }
+
+    if (!player.lastShot)
+    {
+        player.lastShot = 0;
+    }
+
+    if (keys.space && Date.now() - player.lastShot > 150)
+    {
+        player.lastShot = Date.now();
+        let bulletId = 'bullet_' + Date.now();
+
+        let bulletData = {
+            name: bulletId,
+            id: bulletId,
+            width: 10,
+            height: 10,
+            bgcolor: 'white',
+            texture: '',
+            x: player.x + player.width,
+            y: player.y + 10,
+            vx: 8,
+            vy: 0,
+            shields: 1,
+            energy: 1,
+            emotion: 'neutral',
+            contacts: 0,
+            isBullet: true,
+            isStatic: false,
+            life: 120
+        };
+
+        spawnData(bulletData);
+    }
+}
+
+function droneFlightPatternSystem()
+{
+    for (let i = 0; i < world.length; i++)
+    {
+        let entity = world[i];
+        
+        if (!entity.si)
+        {
+            continue;
+        }
+
+        entity.si.tick++; 
+
+        if (entity.si.type === 'square') 
+        {
+            let phase = Math.floor(entity.si.tick / 60) % 4; 
+    
+            if (phase === 0)
+            {
+                entity.vx = 2; entity.vy = 0;
+            }
+            else if (phase === 1)
+            {
+                entity.vx = 0; entity.vy = 2;
+            } 
+            else if (phase === 2)
+            {
+                entity.vx = -2; entity.vy = 0;
+            } 
+            else if (phase === 3)
+            {
+                entity.vx = 0;
+                entity.vy = -2;
+            } 
+        } 
+        else if (entity.si.type === 'circle') 
+        {
+            let speed = 2;
+            let time = entity.si.tick * 0.05; 
+            entity.vx = Math.cos(time) * speed;
+            entity.vy = Math.sin(time) * speed;
+        }
+        else if (entity.si.type === 'triangle') 
+        {
+            let phase = Math.floor(entity.si.tick / 60) % 3; 
+    
+            if (phase === 0)
+            {
+                entity.vx = 2;
+                entity.vy = -2;
+            }
+            else if (phase === 1)
+            {
+                entity.vx = 2;
+                entity.vy = 2;
+            } 
+            else if (phase === 2)
+            {
+                entity.vx = -4;
+                entity.vy = 0;
+            } 
+        }
+    }
+}
+
+function lifecycleSystem()
+{
+    for (let i = world.length - 1; i >= 0; i--)
+    {
+        let entity = world[i];
+        
+        if (entity.isBullet)
+        {
+            entity.life--;
+            
+            if (entity.life <= 0)
+            {
+                entity.element.remove();
+                world.splice(i, 1);
+            }
+        }
+    }
+}
+
+//----//
+
+function movementSystem()
+{
+    for (let i = 0; i < world.length; i++)
+    {
+        if (world[i].isStatic === true)
+        {
+            continue;
+        }
+
+        world[i].x += world[i].vx;
+        world[i].y += world[i].vy;
+    }
+}
+
+function gravitySystem(world)
+{
+    for (let i = 0; i < world.length; i++)
+    {
+        let entity = world[i];
+
+        if (entity.hasGravity === true)
+        {
+            entity.vy += entity.gravity;
+
+            // Terminal velocity cap
+            if (entity.vy > 15)
+            {
+                entity.vy = 15;
+            }
+        }
+    }
+}
+
+function groundCollisionSystem(world, floorY)
+{
+    for (let i = 0; i < world.length; i++)
+    {
+        let entity = world[i];
+
+        if (entity.hasGravity === true)
+        {
+            let entityBottom = entity.y + entity.height;
+
+            if (entityBottom >= floorY)
+            {
+                entity.y = floorY - entity.height;
+                entity.vy = 0;
+                entity.isGrounded = true;
+            }
+            else
+            {
+                entity.isGrounded = false;
+            }
+        }
+    }
+}
+
+function collisionSystem()
+{
+    for (let i = 0; i < world.length; i++)
+    {
+        for (let j = i + 1; j < world.length; j++)
+        {
+            let e1 = world[i];
+            let e2 = world[j];
+
+            // Two immovable obstacles never need to collide with each other
+            if (e1.isStatic === true && e2.isStatic === true)
+            {
+                continue;
+            }
+
+            let padX1 = e1.hitboxPadX || 0;
+            let padY1 = e1.hitboxPadY || 0;
+            let padX2 = e2.hitboxPadX || 0;
+            let padY2 = e2.hitboxPadY || 0;
+
+            let left1 = e1.x + padX1;
+            let right1 = e1.x + e1.width - padX1;
+            let top1 = e1.y + padY1;
+            let bottom1 = e1.y + e1.height - padY1;
+
+            let left2 = e2.x + padX2;
+            let right2 = e2.x + e2.width - padX2;
+            let top2 = e2.y + padY2;
+            let bottom2 = e2.y + e2.height - padY2;
+
+            let isColliding = (
+                left1 < right2 &&
+                right1 > left2 &&
+                top1 < bottom2 &&
+                bottom1 > top2
+            );
+
+            if (isColliding)
+            {
+                let hitWidth1 = right1 - left1;
+                let hitHeight1 = bottom1 - top1;
+                let hitWidth2 = right2 - left2;
+                let hitHeight2 = bottom2 - top2;
+
+                let center1X = left1 + (hitWidth1 / 2);
+                let center1Y = top1 + (hitHeight1 / 2);
+
+                let center2X = left2 + (hitWidth2 / 2);
+                let center2Y = top2 + (hitHeight2 / 2);
+
+                let diffX = center1X - center2X;
+                let diffY = center1Y - center2Y;
+
+                let overlapX = (hitWidth1 / 2 + hitWidth2 / 2) - Math.abs(diffX);
+                let overlapY = (hitHeight1 / 2 + hitHeight2 / 2) - Math.abs(diffY);
+
+                e1.contacts += 1;
+                e2.contacts += 1;
+
+                // Horizontal collision (left/right sides of obstacle)
+                if (overlapX < overlapY)
+                {
+                    if (e1.isStatic === true)
+                    {
+                        if (diffX > 0)
+                        {
+                            e2.x -= overlapX;
+                            if (e2.vx > 0) e2.vx = 0;
+                        }
+                        else
+                        {
+                            e2.x += overlapX;
+                            if (e2.vx < 0) e2.vx = 0;
+                        }
+                    }
+                    else if (e2.isStatic === true)
+                    {
+                        if (diffX > 0)
+                        {
+                            e1.x += overlapX;
+                            if (e1.vx < 0) e1.vx = 0;
+                        }
+                        else
+                        {
+                            e1.x -= overlapX;
+                            if (e1.vx > 0) e1.vx = 0;
+                        }
+                    }
+                    else
+                    {
+                        if (diffX > 0)
+                        {
+                            e1.x += overlapX / 2;
+                            e2.x -= overlapX / 2;
+                        }
+                        else
+                        {
+                            e1.x -= overlapX / 2;
+                            e2.x += overlapX / 2;
+                        }
+
+                        let movingTowardX = (diffX > 0 && e1.vx < e2.vx) || (diffX < 0 && e1.vx > e2.vx);
+
+                        if (movingTowardX)
+                        {
+                            let tempVx = e1.vx;
+                            e1.vx = e2.vx;
+                            e2.vx = tempVx;
+                        }
+                    }
+                }
+                // Vertical collision (standing on top or hitting bottom)
+                else
+                {
+                    if (e1.isStatic === true)
+                    {
+                        if (diffY > 0)
+                        {
+                            // e2 landed on top of static obstacle e1
+                            e2.y -= overlapY;
+                            if (e2.vy > 0)
+                            {
+                                e2.vy = 0;
+                                e2.isGrounded = true;
+                            }
+                        }
+                        else
+                        {
+                            // e2 hit the underside of static obstacle e1
+                            e2.y += overlapY;
+                            if (e2.vy < 0) e2.vy = 0;
+                        }
+                    }
+                    else if (e2.isStatic === true)
+                    {
+                        if (diffY > 0)
+                        {
+                            // e1 hit the underside of static obstacle e2
+                            e1.y += overlapY;
+                            if (e1.vy < 0) e1.vy = 0;
+                        }
+                        else
+                        {
+                            // e1 landed on top of static obstacle e2
+                            e1.y -= overlapY;
+                            if (e1.vy > 0)
+                            {
+                                e1.vy = 0;
+                                e1.isGrounded = true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (diffY > 0)
+                        {
+                            e1.y += overlapY / 2;
+                            e2.y -= overlapY / 2;
+                        }
+                        else
+                        {
+                            e1.y -= overlapY / 2;
+                            e2.y += overlapY / 2;
+                        }
+
+                        let movingTowardY = (diffY > 0 && e1.vy < e2.vy) || (diffY < 0 && e1.vy > e2.vy);
+
+                        if (movingTowardY)
+                        {
+                            let tempVy = e1.vy;
+                            e1.vy = e2.vy;
+                            e2.vy = tempVy;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/*
+function boundarySystem() 
+{
+    let screenWidth = window.innerWidth;
+    let screenHeight = window.innerHeight;
+
+    for (let i = 0; i < world.length; i++)
+    {
+        let element = world[i];
+
+        if (element.x < 0)
+        {
+            element.x = 0; element.vx = -element.vx;
+        }
+
+        else if (element.x + element.width > screenWidth)
+        {
+            element.x = screenWidth - element.width; element.vx = -element.vx;
+        }
+        
+        if (element.y < 0)
+        {
+            element.y = 0; element.vy = -element.vy;
+        }
+
+        else if (element.y + element.height > screenHeight)
+        {
+            element.y = screenHeight - element.height; element.vy = -element.vy;
+        }
+    }
+}
+*/
+
+function boundarySystem()
+{
+    let maxRight = window.innerWidth;
+
+    if (camera.mode === 'follow')
+    {
+        maxRight = worldWidth;
+    }
+
+    for (let i = 0; i < world.length; i++)
+    {
+        let element = world[i];
+
+        if (element.isStatic === true)
+        {
+            continue;
+        }
+
+        // Left and right world boundaries
+        if (element.x < 0)
+        {
+            element.x = 0;
+            element.vx = 0;
+        }
+        else if (element.x + element.width > maxRight)
+        {
+            element.x = maxRight - element.width;
+            element.vx = 0;
+        }
+
+        // Ceiling only — let groundCollisionSystem handle the floor
+        if (element.y < 0)
+        {
+            element.y = 0;
+            element.vy = 0;
+        }
+    }
+}
+
+function createCameraToggleButton()
+{
+    let btn = ce('button');
+    btn.id = 'cameraToggleBtn';
+    btn.textContent = 'Camera: Follow';
+    btn.style.position = 'fixed';
+    btn.style.top = '12px';
+    btn.style.left = '12px';
+    btn.style.zIndex = 100;
+    btn.style.padding = '8px 14px';
+    btn.style.backgroundColor = 'rgb(30, 30, 30)';
+    btn.style.color = 'rgb(255, 255, 255)';
+    btn.style.border = '1px solid rgb(180, 180, 180)';
+    btn.style.borderRadius = '4px';
+    btn.style.fontFamily = 'monospace';
+    btn.style.fontSize = '14px';
+    btn.style.cursor = 'pointer';
+
+    btn.onclick = function()
+    {
+        if (camera.mode === 'follow')
+        {
+            camera.mode = 'stationary';
+            btn.textContent = 'Camera: Stationary';
+        }
+        else
+        {
+            camera.mode = 'follow';
+            btn.textContent = 'Camera: Follow';
+        }
+
+        // Release keyboard focus so Spacebar keeps shooting instead of clicking the button
+        btn.blur();
+    };
+
+    ba(btn);
+}
+
+function updateVisuals()
+{
+    for (let i = 0; i < world.length; i++)
+    {
+        let data = world[i];
+        data.element.style.transform = `translate3d(${data.x}px, ${data.y}px, 0)`;
+        
+        if (!data.isBullet && data.element.textContent != data.contacts)
+        {
+            data.element.textContent = data.contacts;
+        }
+    }
+}
+
+/*
+function gameLoop()
+{
+    playerInputSystem(world);
+    droneFlightPatternSystem(world);
+    gravitySystem(world);
+    movementSystem(world);
+    groundCollisionSystem(world, groundY);
+    collisionSystem();
+    boundarySystem();
+    lifecycleSystem();
+    updateVisuals();
+
+    requestAnimationFrame(gameLoop);
+}
+*/
+
+function gameLoop()
+{
+    playerInputSystem(world);
+    droneFlightPatternSystem(world);
+    gravitySystem(world);
+    movementSystem(world);
+    groundCollisionSystem(world, groundY);
+    collisionSystem();
+    boundarySystem();
+    lifecycleSystem();
+    updateVisuals();
+    cameraSystem();
+
+    requestAnimationFrame(gameLoop);
+}
+
+//----//
+
+function cameraSystem()
+{
+    let targetX = 0;
+
+    if (camera.mode === 'follow')
+    {
+        let playerIndex = fibn(world, 'Nate');
+
+        if (playerIndex !== -1)
+        {
+            let player = world[playerIndex];
+
+            // Center the camera on Tabitha
+            targetX = player.x + (player.width / 2) - (window.innerWidth / 2);
+
+            // Clamp so the camera never scrolls past the left or right world edges
+            let maxCameraX = worldWidth - window.innerWidth;
+
+            if (maxCameraX < 0)
+            {
+                maxCameraX = 0;
+            }
+            if (targetX < 0)
+            {
+                targetX = 0;
+            }
+            if (targetX > maxCameraX)
+            {
+                targetX = maxCameraX;
+            }
+        }
+    }
+
+    // Smoothly glide toward the target position
+    camera.x += (targetX - camera.x) * 0.1;
+
+    let renderCamX = Math.round(camera.x);
+
+    // Shift the entire game world in one GPU transform
+    let board = ge('gameBoard');
+    if (board)
+    {
+        board.style.transform = 'translate3d(' + (-renderCamX) + 'px, 0px, 0px)';
+    }
+
+    // Scroll the fixed grass strip to match the camera movement
+    let ground = ge('ground');
+    if (ground)
+    {
+        ground.style.backgroundPosition = (-renderCamX) + 'px 0px';
+    }
+}
+
+function createGameBoard()
+{
+    let gameBoard = ce('div');
+    gameBoard.id = 'gameBoard';
+    gameBoard.style.position = 'absolute';
+    gameBoard.style.top = '0px';
+    gameBoard.style.left = '0px';
+    gameBoard.style.width = '100vw';
+    gameBoard.style.height = '100vh';
+    gameBoard.style.willChange = 'transform';
+    gameBoard.style.zIndex = 5;
+    ba(gameBoard);
+}
+
+function spawnEntity(name, x, y, width, height, bgcolor, texture)
+{
+    let data = {
+        name: name,
+        id: name,
+        width: width,
+        height: height,
+        hitboxPadX: 25,
+        hitboxPadY: 10,
+        bgcolor: bgcolor,
+        texture: texture,
+        x: x,
+        y: y,
+        vx: 0,
+        vy: 0,
+        shields: 100,
+        energy: 100,
+        emotion: 'neutral',
+        contacts: 0,
+        isBullet: false,
+        isStatic: false,
+        life: 0,
+        gravity: 0.5,
+        hasGravity: true,
+        isGrounded: false,
+        jumpForce: -14,
+    };
+    spawnData(data);
+}
+
+function spawnObstacle(name, x, y, width, height, bgcolor, texture)
+{
+    let data = {
+        name: name,
+        id: name,
+        width: width,
+        height: height,
+        hitboxPadX: 0,
+        hitboxPadY: 0,
+        bgcolor: bgcolor,
+        texture: texture,
+        x: x,
+        y: y,
+        vx: 0,
+        vy: 0,
+        contacts: 0,
+        isBullet: false,
+        isStatic: true,
+        life: 0,
+        gravity: 0,
+        hasGravity: false,
+        isGrounded: false
+    };
+    spawnData(data);
+}
+
+function createGround()
+{
+    let ground = ce('div');
+    ground.id = 'ground';
+    ground.style.width = '100%';
+    ground.style.height = '50px';
+    ground.style.position = 'fixed';
+    ground.style.left = '0px';
+    ground.style.bottom = '0px';
+    ground.style.zIndex = 1;
+    
+    // Parallax Texture Setup
+    ground.style.backgroundColor = 'black'; 
+    ground.style.backgroundImage = "url('textures/bg/grass_seamless.png')";
+    ground.style.backgroundSize = "auto 50px"; // Matches the 50px div height
+    //ground.style.animation = "driftGround 3s linear infinite"; // 3s is much faster than the 20s clouds!
+    
+    ba(ground);
+}
+
+function whenLoaded()
+{
+    createGameBoard();
+
+    createGround();
+
+    createCameraToggleButton();
+
+    /*
+    // Solid crate sitting flush on the ground
+    spawnObstacle('Crate01', 50, groundY - 80, 80, 80, 'rgb(139, 90, 43)', '');
+
+    // Floating platform player can jump onto
+    spawnObstacle('Platform01', 500, groundY - 170, 160, 25, 'rgb(90, 90, 100)', '');
+    */
+
+    // Test obstacles down the level
+    spawnObstacle('Crate01', 600, groundY - 80, 80, 80, 'rgb(139, 90, 43)', '');
+    spawnObstacle('Platform01', 900, groundY - 150, 180, 25, 'rgb(90, 90, 100)', '');
+    spawnObstacle('Crate02', 1400, groundY - 100, 100, 100, 'rgb(139, 90, 43)', '');
+
+    spawnEntity('Bruce', 110, 300, 90, 160, 'transparent','textures/bruce.png'); 
+
+    spawnEntity('Nate', 600, 400, 90, 160, 'transparent', 'textures/nate.png');
+
+    spawnEntity('Eric', 250, 400, 90, 160, 'transparent', 'textures/eric.png');
+    
+    spawnEntity('Debra', 340, 400, 90, 160, 'transparent', 'textures/debra.png'); 
+
+    //world[fibn(world, 'one')].si = { type: 'square', tick: 0 };
+
+    //world[fibn(world, 'two')].si = { type: 'circle', tick: 0 };
+
+    //world[fibn(world, 'three')].si = { type: 'triangle', tick: 0 };
+
+    gameLoop();
+}
+
+</script>
+
+</head>
+
+<body onload="whenLoaded();">
+
+</body>
+
+</html>
+
