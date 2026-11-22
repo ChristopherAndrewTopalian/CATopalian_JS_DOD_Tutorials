@@ -992,6 +992,9 @@ function createGround()
 
 function whenLoaded()
 {
+    // Match the exact top edge of the 50px ground bar
+    groundY = window.innerHeight - 35;
+
     createGameBoard();
 
     createGround();
