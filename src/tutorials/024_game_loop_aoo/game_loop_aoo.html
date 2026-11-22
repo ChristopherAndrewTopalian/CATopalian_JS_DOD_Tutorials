@@ -19,7 +19,7 @@ body
     color: rgb(255, 255, 255);
     overflow: hidden;
     margin: 0;
-    background-image: url('textures/sky.jpg');
+    background-image: url('../../media/textures/bg/sky.jpg');
     background-size: auto 100vh;
     
     animation: driftClouds 50s linear infinite; /* Slowed down for bigger clouds */
@@ -94,7 +94,7 @@ function fibn(whichArray, whichName)
 // ===
 
 // Create a new Audio object
-const bgm = new Audio('songs/Before_the_Winter_Shore.mp3');
+const bgm = new Audio('../../media/songs/Before_the_Winter_Shore.mp3');
 
 // Set loop to true so the track repeats continuously
 bgm.loop = true;
@@ -654,7 +654,7 @@ function createGround()
     
     // Parallax Texture Setup
     ground.style.backgroundColor = 'black'; 
-    ground.style.backgroundImage = "url('textures/bg/grass_seamless.png')"; // Add your image here
+    ground.style.backgroundImage = "url('../../media/textures/ground/grass_seamless.png')"; // Add your image here
     ground.style.backgroundSize = "auto 50px"; // Matches the 50px div height
     //ground.style.animation = "driftGround 3s linear infinite"; // 3s is much faster than the 20s clouds!
     
@@ -667,14 +667,14 @@ function whenLoaded()
 
     createGround();
 
-    spawnEntity('one', 50, 100, 30, 70, 'yellow', 'textures/linda.png');
+    spawnEntity('one', 50, 100, 30, 70, 'yellow', '../../media/textures/people/linda.png');
 
-    spawnEntity('two', 150, 100, 30, 70, 'blue', 'textures/dave.png');
+    spawnEntity('two', 150, 100, 30, 70, 'blue', '../../media/textures/people/dave.png');
 
-    spawnEntity('three', 250, 100, 30, 70, 'red', 'textures/lauren.png');
+    spawnEntity('three', 250, 100, 30, 70, 'red', '../../media/textures/people/lauren.png');
     
     // The Main Player
-    spawnEntity('sixteen', 350, 400, 30, 70, 'white', 'textures/nate.png'); 
+    spawnEntity('sixteen', 350, 400, 30, 70, 'white', '../../media/textures/people//nate.png'); 
 
     //world[fibn(world, 'one')].si = { type: 'square', tick: 0 };
 

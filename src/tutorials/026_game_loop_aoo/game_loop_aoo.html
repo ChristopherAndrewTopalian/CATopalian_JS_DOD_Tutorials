@@ -19,7 +19,7 @@ body
     color: rgb(255, 255, 255);
     overflow: hidden;
     margin: 0;
-    background-image: url('textures/sky.jpg');
+    background-image: url('../../media/textures/bg/sky.jpg');
     background-size: auto 100vh;
     
     animation: driftClouds 50s linear infinite; /* Slowed down for bigger clouds */
@@ -102,7 +102,7 @@ function fibn(whichArray, whichName)
 // ===
 
 // Create a new Audio object
-const bgm = new Audio('songs/Before_the_Winter_Shore.mp3');
+const bgm = new Audio('../../media/songs/Before_the_Winter_Shore.mp3');
 
 // Set loop to true so the track repeats continuously
 bgm.loop = true;
@@ -983,7 +983,7 @@ function createGround()
     
     // Parallax Texture Setup
     ground.style.backgroundColor = 'black'; 
-    ground.style.backgroundImage = "url('textures/bg/grass_seamless.png')";
+    ground.style.backgroundImage = "url('../../media/textures/ground/grass_seamless.png')";
     ground.style.backgroundSize = "auto 50px"; // Matches the 50px div height
     //ground.style.animation = "driftGround 3s linear infinite"; // 3s is much faster than the 20s clouds!
     
@@ -1011,13 +1011,13 @@ function whenLoaded()
     spawnObstacle('Platform01', 900, groundY - 150, 180, 25, 'rgb(90, 90, 100)', '');
     spawnObstacle('Crate02', 1400, groundY - 100, 100, 100, 'rgb(139, 90, 43)', '');
 
-    spawnEntity('Bruce', 110, 300, 90, 160, 'transparent','textures/bruce.png'); 
+    spawnEntity('Bruce', 110, 300, 90, 160, 'transparent','../../media/textures/people/bruce.png'); 
 
-    spawnEntity('Nate', 600, 400, 90, 160, 'transparent', 'textures/nate.png');
+    spawnEntity('Nate', 600, 400, 90, 160, 'transparent', '../../media/textures/people/nate.png');
 
-    spawnEntity('Eric', 250, 400, 90, 160, 'transparent', 'textures/eric.png');
+    spawnEntity('Eric', 250, 400, 90, 160, 'transparent', '../../media/textures/people/eric.png');
     
-    spawnEntity('Debra', 340, 400, 90, 160, 'transparent', 'textures/debra.png'); 
+    spawnEntity('Debra', 340, 400, 90, 160, 'transparent', '../../media/textures/people/debra.png'); 
 
     //world[fibn(world, 'one')].si = { type: 'square', tick: 0 };
 
