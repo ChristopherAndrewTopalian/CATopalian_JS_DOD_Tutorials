@@ -399,7 +399,7 @@ function createGameBoard()
     gameBoard.style.height = '100vh';
     
     // Apply the main grass background to the board
-    gameBoard.style.backgroundImage = "url('textures/grass.jpg')";
+    gameBoard.style.backgroundImage = "url('../../media/textures/ground/grass.jpg')";
     gameBoard.style.backgroundSize = "cover";
     
     ba(gameBoard);
@@ -424,7 +424,7 @@ function whenLoaded()
     // Spawn the Villagers
     for (let i = 0; i < people.length; i++) {
         let name = people[i].split('.')[0]; // Clean the ID name (e.g. 'bruce' instead of 'bruce.png')
-        let path = 'textures/' + people[i]; // Assuming they are in a textures folder
+        let path = '../../media/textures/people/' + people[i]; // Assuming they are in a textures folder
         
         // 1:3 Aspect Ratio (Width: 30, Height: 90)
         spawnEntity(name, 300 + (Math.random()*200), 200 + (Math.random()*150), 30, 90, 'transparent', path);
@@ -432,7 +432,7 @@ function whenLoaded()
     
     // Spawn the Player (The Mayor)
     // We'll give the mayor the final texture (ron_back) and make him slightly larger
-    spawnEntity('Mayor', 400, 300, 40, 120, 'transparent', 'textures/ron_back.png'); 
+    spawnEntity('Mayor', 400, 300, 40, 120, 'transparent', '../../media/textures/people/ron_back.png'); 
 
     gameLoop();
 }

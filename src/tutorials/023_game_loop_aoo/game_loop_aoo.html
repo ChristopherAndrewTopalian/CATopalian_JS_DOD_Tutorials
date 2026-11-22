@@ -19,7 +19,7 @@ body
     color: rgb(255, 255, 255);
     overflow: hidden;
     margin: 0;
-    background-image: url('textures/bg/sky_clouds_001.jpg');
+    background-image: url('../../media/textures/bg/sky_clouds_001.jpg');
     background-size: auto 100vh;
     
     animation: driftClouds 20s linear infinite; /* Slowed down for bigger clouds */
@@ -586,7 +586,7 @@ function createGround()
     
     // Parallax Texture Setup
     ground.style.backgroundColor = 'black'; 
-    ground.style.backgroundImage = "url('textures/bg/grass_seamless.png')"; // Add your image here
+    ground.style.backgroundImage = "url('../../media/textures/ground/grass_seamless.png')"; // Add your image here
     ground.style.backgroundSize = "auto 50px"; // Matches the 50px div height
     ground.style.animation = "driftGround 3s linear infinite"; // 3s is much faster than the 20s clouds!
     
@@ -599,11 +599,11 @@ function whenLoaded()
 
     createGround();
 
-    spawnEntity('one', 50, 100, 30, 30, 'yellow', 'textures/drones/drone_001.webp');
+    spawnEntity('one', 50, 100, 30, 30, 'yellow', '../../media/textures/drones/drone_001.webp');
 
-    spawnEntity('two', 150, 100, 30, 30, 'blue', 'textures/drones/drone_002.webp');
+    spawnEntity('two', 150, 100, 30, 30, 'blue', '../../media/textures/drones/drone_002.webp');
 
-    spawnEntity('three', 250, 100, 30, 30, 'red', 'textures/drones/drone_003.webp');
+    spawnEntity('three', 250, 100, 30, 30, 'red', '../../media/textures/drones/drone_003.webp');
 
     //spawnEntity('four', 350, 100, 30, 30, 'purple', 'textures/drones/drone_004.webp');
 
@@ -630,7 +630,7 @@ function whenLoaded()
     //spawnEntity('fifteen', 650, 250, 30, 30, 'rgb(0, 200, 0)', 'textures/drones/drone_007.webp');
     
     // The Cue Ball
-    spawnEntity('sixteen', 350, 400, 30, 30, 'white', 'textures/drones/drone_008.webp'); 
+    spawnEntity('sixteen', 350, 400, 30, 30, 'white', '../../media/textures/drones/drone_008.webp'); 
 
     world[fibn(world, 'one')].si = { type: 'square', tick: 0 };
 
