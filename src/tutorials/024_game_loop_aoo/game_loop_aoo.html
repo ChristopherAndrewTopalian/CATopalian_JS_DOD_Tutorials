@@ -1,0 +1,697 @@
+<!-- Dedicated to the Creator of All Beings -->
+<!-- All Rights Reserved Christopher Andrew Topalian Copyright 2000-2026 -->
+<!-- https://github.com/ChristopherTopalian -->
+<!-- https://github.com/ChristopherAndrewTopalian -->
+<!-- game_loop_aoo.html -->
+
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<title> Game Loop AOO </title>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+
+<style>
+
+body
+{
+    background-color: rgb(30, 30, 30);
+    color: rgb(255, 255, 255);
+    overflow: hidden;
+    margin: 0;
+    background-image: url('textures/sky.jpg');
+    background-size: auto 100vh;
+    
+    animation: driftClouds 50s linear infinite; /* Slowed down for bigger clouds */
+    overflow: hidden;
+}
+
+@keyframes driftClouds {
+    from {
+        background-position: 0px 0px; 
+    }
+    to {
+        /* 
+           Because the image is scaled to 100vh tall, and it is a perfect square, 
+           it is exactly 100vh wide. We move it exactly that much to perfectly loop */
+        background-position: -100vh 0px; 
+    }
+}
+
+@keyframes driftGround {
+    from {
+        background-position: 0px 0px; 
+    }
+    to {
+        /* using a seamless repeating texture */
+        background-position: -1000px 0px; 
+    }
+}
+
+</style>
+
+<script>
+
+// ===
+// WORLD VARIABLES
+// ===
+let world = [];
+
+let groundY = 400;
+
+//----//
+
+// ===
+// SHORTCUTS
+// ===
+
+function ge(whichId)
+{
+    return document.getElementById(whichId);
+}
+
+function ce(whichType)
+{
+    return document.createElement(whichType);
+}
+
+function ba(whichElement)
+{
+    return document.body.append(whichElement);
+}
+
+function fibn(whichArray, whichName)
+{
+    for (let i = 0; i < whichArray.length; i++)
+    {
+        if (whichArray[i].name === whichName) return i;
+    }
+    return -1;
+}
+
+// ===
+// MUSIC SYSTEM
+// ===
+
+// Create a new Audio object
+const bgm = new Audio('songs/Before_the_Winter_Shore.mp3');
+
+// Set loop to true so the track repeats continuously
+bgm.loop = true;
+
+// Set a reasonable volume (0.0 to 1.0)
+bgm.volume = 0.5;
+
+// Function to start music safely after a user gesture
+function startBackgroundMusic()
+{
+    if (bgm.paused)
+    {
+        bgm.play().catch(error => {
+            console.log("Audio playback failed:", error);
+        });
+    }
+}
+
+// Example: Trigger playback on the first user interaction (e.g., keypress or click)
+window.addEventListener('keydown', startBackgroundMusic, { once: true });
+
+window.addEventListener('click', startBackgroundMusic, { once: true });
+
+// Pause or reset when game state changes
+function pauseMusic() {
+    bgm.pause();
+}
+
+function restartMusic() {
+    bgm.pause();
+    bgm.currentTime = 0;
+    bgm.play();
+}
+
+//----//
+
+// ===
+// CONTROLS
+// ===
+
+let keys = {
+    w: false,
+    a: false,
+    s: false,
+    d: false,
+    space: false
+};
+
+window.addEventListener('keydown', function(e)
+{
+    if (e.key === 'w' || e.key === 'W')
+    {
+        keys.w = true;
+    }
+    if (e.key === 'a' || e.key === 'A')
+    {
+        keys.a = true;
+    }
+    if (e.key === 's' || e.key === 'S')
+    {
+        keys.s = true;
+    }
+    if (e.key === 'd' || e.key === 'D')
+    {
+        keys.d = true;
+    }
+    if (e.key === ' ')
+    {
+        keys.space = true;
+    }
+});
+
+window.addEventListener('keyup', function(e) {
+    if (e.key === 'w' || e.key === 'W')
+    {
+        keys.w = false;
+    }
+    if (e.key === 'a' || e.key === 'A')
+    {
+        keys.a = false;
+    }
+    if (e.key === 's' || e.key === 'S')
+    {
+        keys.s = false;
+    }
+
+    if (e.key === 'd' || e.key === 'D')
+    {
+        keys.d = false;
+    }
+
+    if (e.key === ' ')
+    {
+        keys.space = false;
+    }
+});
+
+//----//
+
+// ===
+// ENTITY ELEMENT CREATION
+// ===
+
+function createEntityVisual(data)
+{
+    let visual = ce('div');
+    visual.id = data.id;
+    
+    // Only show text if it is a ship/drone (NOT a bullet)
+    //visual.textContent = data.isBullet ? '' : data.id;
+    if (data.isBullet)
+    {
+        visual.textContent = '';
+    }
+    else
+    {
+        visual.textContent = data.id;
+    }
+    
+    visual.style.position = 'absolute';
+    visual.style.width = data.width + 'px';
+    visual.style.height = data.height + 'px';
+    visual.style.zIndex = 4;
+    
+    // If it has a texture, use the texture and ignore bgcolor.
+    // If it is a bullet, just use the bgcolor.
+    if (data.texture)
+    {
+        visual.style.backgroundImage = `url('${data.texture}')`;
+        visual.style.backgroundSize = '100% 100%';
+        visual.style.backgroundColor = 'transparent';
+    }
+    else
+    {
+        visual.style.backgroundColor = data.bgcolor;
+    }
+    
+    visual.style.padding = '0px';
+    visual.style.margin = '0px';
+    visual.style.borderRadius = '50%';
+    visual.style.color = 'black';
+    visual.style.textAlign = 'center';
+    visual.style.lineHeight = data.height + 'px';
+    
+    visual.style.left = '0px'; 
+    visual.style.top = '0px';
+    visual.style.willChange = 'transform';
+    
+    ge('gameBoard').append(visual);
+    
+    data.element = visual; 
+    return visual;
+}
+
+// The generic spawner for injecting pre-built data objects
+function spawnData(dataObject)
+{
+    createEntityVisual(dataObject);
+    world.push(dataObject);
+    return dataObject;
+}
+
+//----//
+
+function playerInputSystem()
+{
+    let playerIndex = fibn(world, 'sixteen');
+
+    if (playerIndex === -1)
+    {
+        return;
+    }
+    
+    let player = world[playerIndex];
+    let accel = 0.5;
+    let friction = 0.92; 
+
+    player.vx *= friction;
+    player.vy *= friction;
+
+    if (keys.w)
+    {
+        player.vy -= accel;
+    }
+    if (keys.s)
+    {
+        player.vy += accel;
+    }
+    if (keys.a)
+    {
+        player.vx -= accel;
+    }
+    if (keys.d)
+    {
+        player.vx += accel;
+    }
+    
+    if (!player.lastShot)
+    {
+        player.lastShot = 0;
+    }
+    
+    if (keys.space && Date.now() - player.lastShot > 150)
+    {
+        player.lastShot = Date.now();
+        let bulletId = 'bullet_' + Date.now();
+        
+        // Build the complete data FIRST
+        let bulletData = {
+            name: bulletId,
+            id: bulletId,
+            width: 10,
+            height: 10,
+            bgcolor: 'red',
+            texture: '',
+            x: player.x + player.width,
+            y: player.y + 10,
+            vx: 8, 
+            vy: 0,
+            shields: 1,
+            energy: 1,
+            emotion: 'neutral',
+            contacts: 0,
+            isBullet: true, // It is flagged BEFORE the DOM sees it
+            life: 120
+        };
+        
+        // THEN spawn it
+        spawnData(bulletData);
+    }
+}
+
+function droneFlightPatternSystem()
+{
+    for (let i = 0; i < world.length; i++)
+    {
+        let entity = world[i];
+        
+        if (!entity.si)
+        {
+            continue;
+        }
+
+        entity.si.tick++; 
+
+        if (entity.si.type === 'square') 
+        {
+            let phase = Math.floor(entity.si.tick / 60) % 4; 
+    
+            if (phase === 0)
+            {
+                entity.vx = 2; entity.vy = 0;
+            }
+            else if (phase === 1)
+            {
+                entity.vx = 0; entity.vy = 2;
+            } 
+            else if (phase === 2)
+            {
+                entity.vx = -2; entity.vy = 0;
+            } 
+            else if (phase === 3)
+            {
+                entity.vx = 0;
+                entity.vy = -2;
+            } 
+        } 
+        else if (entity.si.type === 'circle') 
+        {
+            let speed = 2;
+            let time = entity.si.tick * 0.05; 
+            entity.vx = Math.cos(time) * speed;
+            entity.vy = Math.sin(time) * speed;
+        }
+        else if (entity.si.type === 'triangle') 
+        {
+            let phase = Math.floor(entity.si.tick / 60) % 3; 
+    
+            if (phase === 0)
+            {
+                entity.vx = 2;
+                entity.vy = -2;
+            }
+            else if (phase === 1)
+            {
+                entity.vx = 2;
+                entity.vy = 2;
+            } 
+            else if (phase === 2)
+            {
+                entity.vx = -4;
+                entity.vy = 0;
+            } 
+        }
+    }
+}
+
+function lifecycleSystem()
+{
+    for (let i = world.length - 1; i >= 0; i--)
+    {
+        let entity = world[i];
+        
+        if (entity.isBullet)
+        {
+            entity.life--;
+            
+            if (entity.life <= 0)
+            {
+                entity.element.remove();
+                world.splice(i, 1);
+            }
+        }
+    }
+}
+
+//----//
+
+function movementSystem()
+{
+    for (let i = 0; i < world.length; i++)
+    {
+        world[i].x += world[i].vx;
+        world[i].y += world[i].vy;
+    }
+}
+
+function gravitySystem(world)
+{
+    for (let i = 0; i < world.length; i++)
+    {
+        let entity = world[i];
+
+        if (entity.hasGravity === true)
+        {
+            entity.vy += entity.gravity;
+
+            // Terminal velocity cap
+            if (entity.vy > 15)
+            {
+                entity.vy = 15;
+            }
+        }
+    }
+}
+
+function groundCollisionSystem(world, floorY)
+{
+    for (let i = 0; i < world.length; i++)
+    {
+        let entity = world[i];
+
+        if (entity.hasGravity === true)
+        {
+            let entityBottom = entity.y + entity.height;
+
+            if (entityBottom >= floorY)
+            {
+                // Snap feet to the exact floor line
+                entity.y = floorY - entity.height;
+                entity.vy = 0;
+                entity.isGrounded = true;
+            }
+            else
+            {
+                entity.isGrounded = false;
+            }
+        }
+    }
+}
+
+function collisionSystem()
+{
+    for (let i = 0; i < world.length; i++)
+    {
+        for (let j = i + 1; j < world.length; j++)
+        {
+            let e1 = world[i];
+            let e2 = world[j];
+
+            let isColliding = (
+                e1.x < e2.x + e2.width &&
+                e1.x + e1.width > e2.x &&
+                e1.y < e2.y + e2.height &&
+                e1.y + e1.height > e2.y
+            );
+
+            if (isColliding)
+            {
+                let center1X = e1.x + (e1.width / 2);
+            
+                let center1Y = e1.y + (e1.height / 2);
+
+                let center2X = e2.x + (e2.width / 2);
+
+                let center2Y = e2.y + (e2.height / 2);
+
+                let diffX = center1X - center2X;
+    
+                let diffY = center1Y - center2Y;
+
+                e1.contacts += 1;
+                e2.contacts += 1;
+
+                if (Math.abs(diffX) / (e1.width + e2.width) > Math.abs(diffY) / (e1.height + e2.height))
+                {
+                    let overlapX = ((e1.width/2 + e2.width/2) - Math.abs(diffX)) * 1.05;
+        
+                    if (diffX > 0)
+                    {
+                        e1.x += overlapX / 2; e2.x -= overlapX / 2;
+                    }
+                    else
+                    {
+                        e1.x -= overlapX / 2; e2.x += overlapX / 2;
+                    }
+
+                    let tempVx = e1.vx;
+
+                    e1.vx = e2.vx + (Math.random() * 0.01 - 0.005);
+
+                    e2.vx = tempVx + (Math.random() * 0.01 - 0.005);
+                }
+                else
+                {
+                    let overlapY = ((e1.height/2 + e2.height/2) - Math.abs(diffY)) * 1.05;
+
+                    if (diffY > 0)
+                    {
+                        e1.y += overlapY / 2; e2.y -= overlapY / 2;
+                    }
+                    else
+                    {
+                        e1.y -= overlapY / 2; e2.y += overlapY / 2;
+                    }
+
+                    let tempVy = e1.vy;
+
+                    e1.vy = e2.vy + (Math.random() * 0.01 - 0.005);
+                    e2.vy = tempVy + (Math.random() * 0.01 - 0.005);
+                }
+            }
+        }
+    }
+}
+
+function boundarySystem() 
+{
+    let screenWidth = window.innerWidth;
+    let screenHeight = window.innerHeight;
+
+    for (let i = 0; i < world.length; i++)
+    {
+        let element = world[i];
+
+        if (element.x < 0)
+        {
+            element.x = 0; element.vx = -element.vx;
+        }
+
+        else if (element.x + element.width > screenWidth)
+        {
+            element.x = screenWidth - element.width; element.vx = -element.vx;
+        }
+        
+        if (element.y < 0)
+        {
+            element.y = 0; element.vy = -element.vy;
+        }
+
+        else if (element.y + element.height > screenHeight)
+        {
+            element.y = screenHeight - element.height; element.vy = -element.vy;
+        }
+    }
+}
+
+function updateVisuals()
+{
+    for (let i = 0; i < world.length; i++)
+    {
+        let data = world[i];
+        data.element.style.transform = `translate3d(${data.x}px, ${data.y}px, 0)`;
+        
+        if (!data.isBullet && data.element.textContent != data.contacts)
+        {
+            data.element.textContent = data.contacts;
+        }
+    }
+}
+
+//----//
+
+function gameLoop()
+{
+    boundarySystem();
+    collisionSystem();
+    playerInputSystem(world);
+    droneFlightPatternSystem(world);
+    gravitySystem(world);
+    movementSystem(world);
+    groundCollisionSystem(world, groundY);
+    updateVisuals();
+    
+    requestAnimationFrame(gameLoop);
+}
+
+//----//
+
+function createGameBoard()
+{
+    let gameBoard = ce('div');
+    gameBoard.id = 'gameBoard';
+    gameBoard.style.position = 'absolute';
+    gameBoard.style.top = '0px';
+    gameBoard.style.left = '0px';
+    gameBoard.style.width = '100vw';
+    gameBoard.style.height = '100vh';
+    ba(gameBoard);
+}
+
+function spawnEntity(name, x, y, width, height, bgcolor, texture)
+{
+    let data = {
+        name: name,
+        id: name,
+        width: width,
+        height: height,
+        bgcolor: bgcolor,
+        texture: texture,
+        x: x,
+        y: y,
+        vx: 0, 
+        vy: 0,  
+        shields: 100,
+        energy: 100,
+        emotion: 'neutral',
+        contacts: 0,
+        isBullet: false,
+        life: 0,
+        gravity: 0.5,
+        hasGravity: true,
+        isGrounded: false
+    };
+    spawnData(data);
+}
+
+function createGround()
+{
+    let ground = ce('div');
+    ground.id = 'ground';
+    ground.style.width = '100%';
+    ground.style.height = '50px';
+    ground.style.position = 'fixed';
+    ground.style.left = '0px';
+    ground.style.bottom = '0px';
+    
+    // Parallax Texture Setup
+    ground.style.backgroundColor = 'black'; 
+    ground.style.backgroundImage = "url('textures/bg/grass_seamless.png')"; // Add your image here
+    ground.style.backgroundSize = "auto 50px"; // Matches the 50px div height
+    //ground.style.animation = "driftGround 3s linear infinite"; // 3s is much faster than the 20s clouds!
+    
+    ba(ground);
+}
+
+function whenLoaded()
+{
+    createGameBoard();
+
+    createGround();
+
+    spawnEntity('one', 50, 100, 30, 70, 'yellow', 'textures/linda.png');
+
+    spawnEntity('two', 150, 100, 30, 70, 'blue', 'textures/dave.png');
+
+    spawnEntity('three', 250, 100, 30, 70, 'red', 'textures/lauren.png');
+    
+    // The Main Player
+    spawnEntity('sixteen', 350, 400, 30, 70, 'white', 'textures/nate.png'); 
+
+    //world[fibn(world, 'one')].si = { type: 'square', tick: 0 };
+
+    //world[fibn(world, 'two')].si = { type: 'circle', tick: 0 };
+
+    //world[fibn(world, 'three')].si = { type: 'triangle', tick: 0 };
+
+    gameLoop();
+}
+
+</script>
+
+</head>
+
+<body onload="whenLoaded();">
+
+</body>
+
+</html>
+
