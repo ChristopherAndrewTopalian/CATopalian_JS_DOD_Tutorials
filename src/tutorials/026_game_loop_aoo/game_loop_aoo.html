@@ -734,38 +734,7 @@ function collisionSystem()
     }
 }
 
-/*
-function boundarySystem() 
-{
-    let screenWidth = window.innerWidth;
-    let screenHeight = window.innerHeight;
-
-    for (let i = 0; i < world.length; i++)
-    {
-        let element = world[i];
-
-        if (element.x < 0)
-        {
-            element.x = 0; element.vx = -element.vx;
-        }
-
-        else if (element.x + element.width > screenWidth)
-        {
-            element.x = screenWidth - element.width; element.vx = -element.vx;
-        }
-        
-        if (element.y < 0)
-        {
-            element.y = 0; element.vy = -element.vy;
-        }
-
-        else if (element.y + element.height > screenHeight)
-        {
-            element.y = screenHeight - element.height; element.vy = -element.vy;
-        }
-    }
-}
-*/
+//----//
 
 function boundarySystem()
 {
@@ -858,22 +827,7 @@ function updateVisuals()
     }
 }
 
-/*
-function gameLoop()
-{
-    playerInputSystem(world);
-    droneFlightPatternSystem(world);
-    gravitySystem(world);
-    movementSystem(world);
-    groundCollisionSystem(world, groundY);
-    collisionSystem();
-    boundarySystem();
-    lifecycleSystem();
-    updateVisuals();
-
-    requestAnimationFrame(gameLoop);
-}
-*/
+//----//
 
 function gameLoop()
 {
